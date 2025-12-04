@@ -32,48 +32,49 @@ Route → Middleware → Handler → Service → Repository
 ```
 go-backend-template/
 ├── cmd/
-│   └── server/              # Application entry point
-│       ├── main.go          # Main function
-│       └── config.go        # Configuration loading
+│   └── server/                        # Application entry point
+│       ├── main.go
+│       └── config.go
 ├── internal/
 │   ├── app/
-│   │   └── server/          # HTTP server implementation
-│   │       ├── server.go    # Server setup and configuration
-│   │       ├── handler/     # HTTP handlers (controllers)
-│   │       │   ├── base.go  # Base handler with common methods
-│   │       │   ├── context.go # Context helpers
-│   │       │   └── user/    # User domain handlers
+│   │   └── server/                    # HTTP server implementation
+│   │       ├── server.go
+│   │       ├── handler/               # HTTP handlers (controllers)
+│   │       │   ├── base.go            # Common error handling
+│   │       │   ├── context.go         # Context helpers
+│   │       │   └── user/              # User domain handlers
 │   │       │       ├── handler.go
-│   │       │       └── dto.go
-│   │       ├── middleware/  # HTTP middlewares
+│   │       │       └── dto.go         # Request/Response DTOs
+│   │       ├── middleware/            # HTTP middlewares
 │   │       │   └── auth/
 │   │       │       └── auth.go
-│   │       ├── routes/      # Route definitions
+│   │       ├── routes/                # Route definitions
 │   │       │   ├── routes.go
 │   │       │   └── user.go
-│   │       └── service/     # Business logic layer
+│   │       └── service/               # Business logic layer
 │   │           └── user/
 │   │               ├── service.go
-│   │               ├── input.go
-│   │               └── dependencies.go
-│   └── pkg/                 # Shared internal packages
-│       ├── auth/            # Authentication utilities
+│   │               ├── input.go       # Service input types
+│   │               └── dependencies.go # Dependency interfaces
+│   └── pkg/                           # Shared internal packages
+│       ├── auth/                      # Authentication utilities
 │       │   ├── jwt.go
 │       │   └── password.go
-│       ├── domain/          # Domain errors
+│       ├── domain/                    # Domain errors
 │       │   └── errors.go
-│       ├── entity/          # Domain entities
+│       ├── entity/                    # Domain entities
 │       │   └── user.go
-│       └── repository/      # Data access layer
+│       └── repository/                # Data access layer
+│           ├── errors.go              # Common repository errors
 │           └── postgres/
 │               ├── repository.go
-│               ├── errors.go
+│               ├── schema.go          # Table schemas
 │               └── user.go
 ├── build/
-│   └── Dockerfile           # Docker build file
+│   └── Dockerfile
 ├── deployments/
-│   ├── docker-compose.yml   # Docker Compose for local dev
-│   └── .env.example         # Environment variables example
+│   ├── docker-compose.yml
+│   └── .env.example
 ├── go.mod
 ├── go.sum
 ├── Makefile
@@ -329,16 +330,46 @@ internal/order/domain/errors.go
 
 ### Service-to-Service Dependencies
 
-To avoid circular dependencies when services need to call each other:
+> **If circular dependency occurs, review the design first.**
+> 
+> Circular dependencies often indicate poor separation of responsibilities, or logic that should be coordinated at a higher layer is placed in services. Interface separation is a technical workaround, not a fundamental solution.
+
+**Design review example:**
 
 ```go
-// Separate with interfaces
+// Before: UserService directly checks orders before deletion
+type UserService struct {
+    orderService *OrderService  // circular dependency
+}
+
+// After: Coordinate at higher layer (Handler)
+func (h *Handler) DeleteUser(userId int) error {
+    if hasOrders, _ := h.orderService.HasActiveOrders(userId); hasOrders {
+        return errors.New("active orders exist")
+    }
+    return h.userService.Delete(userId)
+}
+```
+
+**Fallback: Separate with interfaces**
+
+When design changes are difficult, define only needed functionality as interfaces:
+
+```go
 type IUserGetter interface {
     GetUserById(id int) (*entity.User, error)
 }
 
+type IOrderChecker interface {
+    HasActiveOrders(userId int) (bool, error)
+}
+
+type UserService struct {
+    orderChecker IOrderChecker  // depends on interface
+}
+
 type OrderService struct {
-    userGetter IUserGetter  // interface, not concrete service
+    userGetter IUserGetter      // depends on interface
 }
 ```
 

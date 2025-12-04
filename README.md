@@ -32,48 +32,49 @@ Route → Middleware → Handler → Service → Repository
 ```
 go-backend-template/
 ├── cmd/
-│   └── server/              # 애플리케이션 진입점
-│       ├── main.go          # 메인 함수
-│       └── config.go        # 설정 로딩
+│   └── server/                        # 애플리케이션 진입점
+│       ├── main.go
+│       └── config.go
 ├── internal/
 │   ├── app/
-│   │   └── server/          # HTTP 서버 구현
-│   │       ├── server.go    # 서버 설정 및 구성
-│   │       ├── handler/     # HTTP 핸들러 (컨트롤러)
-│   │       │   ├── base.go  # 공통 메서드를 가진 베이스 핸들러
-│   │       │   ├── context.go # 컨텍스트 헬퍼
-│   │       │   └── user/    # User 도메인 핸들러
+│   │   └── server/                    # HTTP 서버 구현
+│   │       ├── server.go
+│   │       ├── handler/               # HTTP 핸들러 (컨트롤러)
+│   │       │   ├── base.go            # 공통 에러 처리
+│   │       │   ├── context.go         # 컨텍스트 헬퍼
+│   │       │   └── user/              # User 도메인 핸들러
 │   │       │       ├── handler.go
-│   │       │       └── dto.go
-│   │       ├── middleware/  # HTTP 미들웨어
+│   │       │       └── dto.go         # 요청/응답 DTO
+│   │       ├── middleware/            # HTTP 미들웨어
 │   │       │   └── auth/
 │   │       │       └── auth.go
-│   │       ├── routes/      # 라우트 정의
+│   │       ├── routes/                # 라우트 정의
 │   │       │   ├── routes.go
 │   │       │   └── user.go
-│   │       └── service/     # 비즈니스 로직 레이어
+│   │       └── service/               # 비즈니스 로직 레이어
 │   │           └── user/
 │   │               ├── service.go
-│   │               ├── input.go
-│   │               └── dependencies.go
-│   └── pkg/                 # 공유 내부 패키지
-│       ├── auth/            # 인증 유틸리티
+│   │               ├── input.go       # 서비스 입력 타입
+│   │               └── dependencies.go # 의존성 인터페이스
+│   └── pkg/                           # 공유 내부 패키지
+│       ├── auth/                      # 인증 유틸리티
 │       │   ├── jwt.go
 │       │   └── password.go
-│       ├── domain/          # 도메인 에러
+│       ├── domain/                    # 도메인 에러
 │       │   └── errors.go
-│       ├── entity/          # 도메인 엔티티
+│       ├── entity/                    # 도메인 엔티티
 │       │   └── user.go
-│       └── repository/      # 데이터 접근 레이어
+│       └── repository/                # 데이터 접근 레이어
+│           ├── errors.go              # 공통 Repository 에러
 │           └── postgres/
 │               ├── repository.go
-│               ├── errors.go
+│               ├── schema.go          # 테이블 스키마
 │               └── user.go
 ├── build/
-│   └── Dockerfile           # Docker 빌드 파일
+│   └── Dockerfile
 ├── deployments/
-│   ├── docker-compose.yml   # 로컬 개발용 Docker Compose
-│   └── .env.example         # 환경 변수 예시
+│   ├── docker-compose.yml
+│   └── .env.example
 ├── go.mod
 ├── go.sum
 ├── Makefile
@@ -329,16 +330,46 @@ internal/order/domain/errors.go
 
 ### 서비스 간 의존성
 
-서비스끼리 호출해야 할 때 순환 의존성을 피하려면:
+> **순환 의존성이 발생했다면, 먼저 설계를 재검토할 것.**
+> 
+> 순환 의존성은 책임 분리가 잘못되었거나, 상위 레이어에서 조율해야 할 로직이 서비스에 들어간 경우가 많음. 인터페이스 분리는 기술적 해결책일 뿐, 근본적인 해결이 아닐 수 있음.
+
+**설계 재검토 예시:**
 
 ```go
-// 인터페이스로 분리
+// Before: UserService가 삭제 전 주문 확인을 직접 함
+type UserService struct {
+    orderService *OrderService  // 순환 발생
+}
+
+// After: 상위 레이어(Handler)에서 조율
+func (h *Handler) DeleteUser(userId int) error {
+    if hasOrders, _ := h.orderService.HasActiveOrders(userId); hasOrders {
+        return errors.New("active orders exist")
+    }
+    return h.userService.Delete(userId)
+}
+```
+
+**차선책: 인터페이스로 분리**
+
+설계 변경이 어려운 경우, 각 서비스가 필요한 기능만 인터페이스로 정의:
+
+```go
 type IUserGetter interface {
     GetUserById(id int) (*entity.User, error)
 }
 
+type IOrderChecker interface {
+    HasActiveOrders(userId int) (bool, error)
+}
+
+type UserService struct {
+    orderChecker IOrderChecker  // 인터페이스에 의존
+}
+
 type OrderService struct {
-    userGetter IUserGetter  // 구체적인 서비스가 아닌 인터페이스
+    userGetter IUserGetter      // 인터페이스에 의존
 }
 ```
 
