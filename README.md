@@ -308,6 +308,25 @@ internal/
 │   └── ...
 ```
 
+### 도메인 에러 분리
+
+도메인이 많아지면 에러도 파일별로 분리:
+
+```
+internal/pkg/domain/
+├── errors.go           # 공통 에러 (InternalServerError, ValidationError 등)
+├── user_errors.go      # User 도메인 에러
+├── order_errors.go     # Order 도메인 에러
+└── product_errors.go   # Product 도메인 에러
+```
+
+또는 도메인별 완전 분리 시:
+
+```
+internal/user/domain/errors.go
+internal/order/domain/errors.go
+```
+
 ### 서비스 간 의존성
 
 서비스끼리 호출해야 할 때 순환 의존성을 피하려면:

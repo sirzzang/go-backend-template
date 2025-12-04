@@ -308,6 +308,25 @@ internal/
 │   └── ...
 ```
 
+### Domain Error Separation
+
+As domains grow, separate errors by file:
+
+```
+internal/pkg/domain/
+├── errors.go           # Common errors (InternalServerError, ValidationError, etc.)
+├── user_errors.go      # User domain errors
+├── order_errors.go     # Order domain errors
+└── product_errors.go   # Product domain errors
+```
+
+Or with full domain separation:
+
+```
+internal/user/domain/errors.go
+internal/order/domain/errors.go
+```
+
 ### Service-to-Service Dependencies
 
 To avoid circular dependencies when services need to call each other:
