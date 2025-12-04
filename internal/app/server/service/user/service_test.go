@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/your-org/go-backend-template/internal/pkg/domain"
 	"github.com/your-org/go-backend-template/internal/pkg/entity"
-	"github.com/your-org/go-backend-template/internal/pkg/repository/postgres"
+	"github.com/your-org/go-backend-template/internal/pkg/repository"
 )
 
 // ========== Mock Repository ==========
@@ -203,7 +203,7 @@ func TestGetUserById_Success(t *testing.T) {
 func TestGetUserById_NotFound(t *testing.T) {
 	svc, mockRepo, _ := setupTestService()
 
-	mockRepo.On("GetUserById", 999).Return(nil, postgres.ErrNoUser)
+	mockRepo.On("GetUserById", 999).Return(nil, repository.ErrUserNotFound)
 
 	user, err := svc.GetUserById(999)
 
@@ -305,7 +305,7 @@ func TestUpdateUser_NotFound(t *testing.T) {
 		Name: &newName,
 	}
 
-	mockRepo.On("GetUserById", 999).Return(nil, postgres.ErrNoUser)
+	mockRepo.On("GetUserById", 999).Return(nil, repository.ErrUserNotFound)
 
 	err := svc.UpdateUser(input)
 
@@ -383,7 +383,7 @@ func TestDeleteUser_Success(t *testing.T) {
 func TestDeleteUser_NotFound(t *testing.T) {
 	svc, mockRepo, _ := setupTestService()
 
-	mockRepo.On("DeleteUserById", 999).Return(postgres.ErrNoUser)
+	mockRepo.On("DeleteUserById", 999).Return(repository.ErrUserNotFound)
 
 	err := svc.DeleteUser(999)
 
@@ -428,7 +428,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		Password: "password123",
 	}
 
-	mockRepo.On("GetUserByEmail", input.Email).Return(nil, postgres.ErrNoUser)
+	mockRepo.On("GetUserByEmail", input.Email).Return(nil, repository.ErrUserNotFound)
 
 	user, err := svc.Login(input)
 
@@ -561,4 +561,3 @@ func TestNewService_NilPasswordHasher(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, svc)
 }
-

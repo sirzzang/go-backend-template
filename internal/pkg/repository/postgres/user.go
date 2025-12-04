@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/your-org/go-backend-template/internal/pkg/entity"
+	"github.com/your-org/go-backend-template/internal/pkg/repository"
 )
 
 // InsertUser creates a new user and returns the created user ID.
@@ -33,7 +34,7 @@ func (r *Repository) InsertUser(user *entity.User) (int, error) {
 		// Check for unique constraint violation
 		if strings.Contains(err.Error(), "unique constraint") ||
 			strings.Contains(err.Error(), "duplicate key") {
-			return 0, ErrDuplicateEmail
+			return 0, repository.ErrDuplicateEmail
 		}
 		return 0, err
 	}
@@ -66,7 +67,7 @@ func (r *Repository) GetUserById(id int) (*entity.User, error) {
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNoUser
+		return nil, repository.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func (r *Repository) GetUserByEmail(email string) (*entity.User, error) {
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNoUser
+		return nil, repository.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -194,7 +195,7 @@ func (r *Repository) UpdateUser(user *entity.User) error {
 	if err != nil {
 		if strings.Contains(err.Error(), "unique constraint") ||
 			strings.Contains(err.Error(), "duplicate key") {
-			return ErrDuplicateEmail
+			return repository.ErrDuplicateEmail
 		}
 		return err
 	}
@@ -204,7 +205,7 @@ func (r *Repository) UpdateUser(user *entity.User) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return ErrNoUser
+		return repository.ErrUserNotFound
 	}
 
 	return nil
@@ -231,7 +232,7 @@ func (r *Repository) UpdateUserPassword(id int, hashedPassword string) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return ErrNoUser
+		return repository.ErrUserNotFound
 	}
 
 	return nil
@@ -254,7 +255,7 @@ func (r *Repository) DeleteUserById(id int) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return ErrNoUser
+		return repository.ErrUserNotFound
 	}
 
 	return nil

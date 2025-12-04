@@ -5,7 +5,7 @@ import (
 
 	"github.com/your-org/go-backend-template/internal/pkg/domain"
 	"github.com/your-org/go-backend-template/internal/pkg/entity"
-	"github.com/your-org/go-backend-template/internal/pkg/repository/postgres"
+	"github.com/your-org/go-backend-template/internal/pkg/repository"
 )
 
 var (
@@ -70,7 +70,7 @@ func (s *Service) CreateUser(input *CreateUserInput) (int, error) {
 	// Insert user
 	userId, err := s.userRepo.InsertUser(user)
 	if err != nil {
-		if errors.Is(err, postgres.ErrDuplicateEmail) {
+		if errors.Is(err, repository.ErrDuplicateEmail) {
 			return 0, domain.UserAlreadyExistsError{Email: input.Email}
 		}
 		return 0, domain.InternalServerError{Msg: "failed to create user", Err: err}
@@ -84,7 +84,7 @@ func (s *Service) CreateUser(input *CreateUserInput) (int, error) {
 func (s *Service) GetUserById(id int) (*entity.User, error) {
 	user, err := s.userRepo.GetUserById(id)
 	if err != nil {
-		if errors.Is(err, postgres.ErrNoUser) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return nil, domain.UserNotFoundError{Id: id}
 		}
 		return nil, domain.InternalServerError{Msg: "failed to get user", Err: err}
@@ -95,7 +95,7 @@ func (s *Service) GetUserById(id int) (*entity.User, error) {
 func (s *Service) GetUserByEmail(email string) (*entity.User, error) {
 	user, err := s.userRepo.GetUserByEmail(email)
 	if err != nil {
-		if errors.Is(err, postgres.ErrNoUser) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return nil, domain.UserNotFoundError{Email: email}
 		}
 		return nil, domain.InternalServerError{Msg: "failed to get user", Err: err}
@@ -135,7 +135,7 @@ func (s *Service) UpdateUser(input *UpdateUserInput) error {
 	// Get existing user
 	user, err := s.userRepo.GetUserById(input.Id)
 	if err != nil {
-		if errors.Is(err, postgres.ErrNoUser) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return domain.UserNotFoundError{Id: input.Id}
 		}
 		return domain.InternalServerError{Msg: "failed to get user", Err: err}
@@ -187,7 +187,7 @@ func (s *Service) UpdateUser(input *UpdateUserInput) error {
 	// Only update if there are changes
 	if hasChanges {
 		if err := s.userRepo.UpdateUser(user); err != nil {
-			if errors.Is(err, postgres.ErrDuplicateEmail) {
+			if errors.Is(err, repository.ErrDuplicateEmail) {
 				return domain.UserAlreadyExistsError{Email: user.Email}
 			}
 			return domain.InternalServerError{Msg: "failed to update user", Err: err}
@@ -203,7 +203,7 @@ func (s *Service) ChangePassword(input *ChangePasswordInput) error {
 	// Get user
 	user, err := s.userRepo.GetUserById(input.UserId)
 	if err != nil {
-		if errors.Is(err, postgres.ErrNoUser) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return domain.UserNotFoundError{Id: input.UserId}
 		}
 		return domain.InternalServerError{Msg: "failed to get user", Err: err}
@@ -232,7 +232,7 @@ func (s *Service) ChangePassword(input *ChangePasswordInput) error {
 
 func (s *Service) DeleteUser(id int) error {
 	if err := s.userRepo.DeleteUserById(id); err != nil {
-		if errors.Is(err, postgres.ErrNoUser) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return domain.UserNotFoundError{Id: id}
 		}
 		return domain.InternalServerError{Msg: "failed to delete user", Err: err}
@@ -246,7 +246,7 @@ func (s *Service) Login(input *LoginInput) (*entity.User, error) {
 	// Get user by email
 	user, err := s.userRepo.GetUserByEmail(input.Email)
 	if err != nil {
-		if errors.Is(err, postgres.ErrNoUser) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return nil, domain.InvalidCredentialsError{}
 		}
 		return nil, domain.InternalServerError{Msg: "failed to get user", Err: err}
@@ -264,4 +264,3 @@ func (s *Service) Login(input *LoginInput) (*entity.User, error) {
 
 	return user, nil
 }
-

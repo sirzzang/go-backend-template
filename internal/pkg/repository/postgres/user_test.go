@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/your-org/go-backend-template/internal/pkg/entity"
+	"github.com/your-org/go-backend-template/internal/pkg/repository"
 )
 
 // Note: These are integration tests that require a test database.
@@ -250,7 +251,7 @@ func TestRepository_GetUserById_NotFound_Integration(t *testing.T) {
 
 	user, err := repo.GetUserById(99999)
 	assert.Error(t, err)
-	assert.Equal(t, ErrNoUser, err)
+	assert.Equal(t, repository.ErrUserNotFound, err)
 	assert.Nil(t, user)
 }
 
@@ -358,7 +359,7 @@ func TestRepository_DeleteUserById_Integration(t *testing.T) {
 	// Verify deletion
 	_, err = repo.GetUserById(id)
 	assert.Error(t, err)
-	assert.Equal(t, ErrNoUser, err)
+	assert.Equal(t, repository.ErrUserNotFound, err)
 }
 
 func TestRepository_ExistsUserByEmail_Integration(t *testing.T) {
@@ -419,7 +420,7 @@ func TestRepository_InsertUser_DuplicateEmail_Integration(t *testing.T) {
 
 	_, err = repo.InsertUser(user2)
 	assert.Error(t, err)
-	assert.Equal(t, ErrDuplicateEmail, err)
+	assert.Equal(t, repository.ErrDuplicateEmail, err)
 }
 
 // ========== Benchmark Tests ==========
@@ -515,4 +516,3 @@ func NewMockDB() *MockDB {
 	// In real implementation, use go-sqlmock
 	return &MockDB{}
 }
-
